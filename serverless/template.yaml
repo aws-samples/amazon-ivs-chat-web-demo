@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: Amazon IVS Simple Chat Backend
+
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+  Function:
+    Runtime: nodejs12.x
+    Timeout: 30
+    MemorySize: 128
+
+Resources:
+  # This is a Lambda function config associated with the source code: chat-auth.js
+  chatAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/chat-auth.chatAuthHandler
+      Description: A function that generates an IVS chat authentication token based on the request parameters.
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - ivschat:*
+            Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /auth
+            Method: POST
+
+  # This is a Lambda function config associated with the source code: chat-event.js
+  chatEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/chat-event.chatEventHandler
+      Description: A function that sends an event to a specified IVS chat room
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - ivschat:*
+            Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /event
+            Method: POST
+
+Outputs:
+  ApiURL:
+    Description: "API endpoint URL for Prod environment"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
