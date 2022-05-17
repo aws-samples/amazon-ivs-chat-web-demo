@@ -66,6 +66,27 @@ Resources:
             Path: /event
             Method: POST
 
+  # This is a Lambda function config associated with the source code: chat-event.js
+  chatListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/chat-list.chatListHandler
+      Description: A function that returns a list of available chat rooms
+      Layers:
+        - !Ref IvsChatLambdaRefLayer
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - ivschat:*
+            Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /list
+            Method: GET
+
 Outputs:
   ApiURL:
     Description: "API endpoint URL for Prod environment"
