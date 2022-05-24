@@ -22,9 +22,32 @@ The chat demo backend emits event messages and handles encrypted chat tokens, wh
   * Authenticate and send Events in Amazon IVS Chat
   * Create Amazon S3 Buckets
 
-## Deployment instructions
+***IMPORTANT NOTE:** Running this demo application in your AWS account will create and consume AWS resources, which will cost money.* Amazon IVS is eligible for the AWS free tier. Visit the Amazon IVS [pricing page](https://aws.amazon.com/ivs/pricing/) for more details.
 
-***IMPORTANT NOTE:** Deploying this demo application in your AWS account will create and consume AWS resources, which will cost money.*
+## Run this app locally
+
+Before you start, run the following command to make sure you're in the correct AWS account (or configure as needed):
+
+```bash
+aws configure
+```
+
+### 1. Install AWS SDK
+
+Navigate to `serverless/dependencies/nodejs` and run `npm install` to install the AWS SDK.
+
+### 2. Start the local api
+
+Navigate back to the `serverless` directory and run the following command:
+
+```bash
+sam local start-api
+```
+
+For a full list of command flags, refer to the [SAM CLI documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-start-api.html)
+
+
+## Deployment instructions
 
 Before you start, run the following command to make sure you're in the correct AWS account (or configure as needed):
 
