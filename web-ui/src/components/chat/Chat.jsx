@@ -140,8 +140,8 @@ const Chat = () => {
     axios
       .post(`${config.API_URL}/auth`, data)
       .then((response) => {
-        setChatToken(response.data);
-        initConnection(response.data);
+        setChatToken(response.data.token);
+        initConnection(response.data.token);
       })
       .catch((error) => {
         setChatToken(null);
