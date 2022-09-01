@@ -24,7 +24,8 @@ exports.chatListHandler = async (event) => {
     try {
       const data = await IVSChat.listRooms().promise();
       console.info("chatListHandler > IVSChat.listRooms > Success");
-      response.body = data;
+      response.statusCode = 200;
+      response.body = JSON.stringify(data);
     } catch (err) {
       console.error('ERROR: chatListHandler > IVSChat.listRooms:', err);
       response.statusCode = 500;

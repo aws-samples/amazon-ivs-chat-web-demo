@@ -36,6 +36,7 @@ exports.chatEventHandler = async (event) => {
     try {
       await IVSChat.sendEvent(params).promise();
       console.info("chatEventHandler > IVSChat.sendEvent > Success");
+      response.statusCode = 200;
       // If sendEvent() is successfull, it will return an empty response.
       // For the purposes of this API however, let's return "success" in the response body
       response.body = JSON.stringify({ 
