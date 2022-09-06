@@ -23,15 +23,22 @@ exports.chatAuthHandler = async (event) => {
 
     // Parse the incoming request body
     const body = JSON.parse(event.body);
-    const { arn, userId } = body;
+    const { arn, roomIdentifier, userId } = body;
+    const roomId = arn || roomIdentifier;
     const additionalAttributes = body.attributes || {};
     const capabilities = body.capabilities || []; // The permission to view messages is implicit
     const durationInMinutes = body.durationInMinutes || 55; // default the expiration to 55 mintues
 
+    if (!roomId || !userId) {
+      response.statusCode = 400;
+      response.body = { error: 'Missing parameters: `arn or roomIdentifier`, `userId`' };
+      return response;
+    }
+
     // Construct parameters.
     // Documentation is available at https://docs.aws.amazon.com/ivs/latest/ChatAPIReference/Welcome.html
     const params = {
-      roomIdentifier: `${arn}`,
+      roomIdentifier: `${roomId}`,
       userId: `${userId}`,
       attributes: { ...additionalAttributes },
       capabilities: capabilities,
@@ -40,8 +47,9 @@ exports.chatAuthHandler = async (event) => {
 
     try {
       const data = await IVSChat.createChatToken(params).promise();
-      console.info("Got data:", data)
-      response.body = data.token;
+      console.info("Got data:", data);
+      response.statusCode = 200;
+      response.body = JSON.stringify(data);
     } catch (err) {
       console.error('ERROR: chatAuthHandler > IVSChat.createChatToken:', err);
       response.statusCode = 500;
