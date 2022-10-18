@@ -12,9 +12,8 @@ The following entries in `src/config.js` (inside the web-ui project directory) a
 
 * `PLAYBACK_URL`
   * Amazon IVS live video stream to play inside the video player
-* `CHAT_WEBSOCKET`
-  * The websocket endpoint for the chat room: `wss://edge.ivschat.<aws-region>.amazonaws.com`. 
-  * For example, if your chat room is located in `us-west-2`, the websocket endpoint would be `wss://edge.ivschat.us-west-2.amazonaws.com`.
+* `CHAT_REGION`
+  * The AWS region of the chat room. For example, `us-west-2`.
 * `API_URL`
   * Endpoint for the [Amazon IVS Chat Demo](../serverless) Backend
 * `CHAT_ROOM_ID`
