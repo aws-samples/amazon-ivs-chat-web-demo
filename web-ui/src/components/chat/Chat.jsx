@@ -1,8 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import React, { useEffect, useState, createRef, useRef } from "react";
+import React, { useEffect, useState, createRef } from "react";
 import axios from "axios";
+import { ChatRoom, DeleteMessageRequest, DisconnectUserRequest, SendMessageRequest } from "amazon-ivs-chat-messaging";
+import { uuidv4, parseUrls, sanitize } from "../../helpers"
 
 import * as config from "../../config";
 
@@ -19,109 +21,16 @@ const Chat = () => {
   const [username, setUsername] = useState("");
   const [moderator, setModerator] = useState(false);
   const [avatar, setAvatar] = useState({});
-  const [chatToken, setChatToken] = useState(null);
-  const [refreshTimer, setRefreshTimer] = useState({});
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const [connection, setConnection] = useState(null);
+  const [chatRoom, setChatRoom] = useState([]);
 
   const chatRef = createRef();
   const messagesEndRef = createRef();
-  const connectionRef = useRef(connection);
-  connectionRef.current = connection;
 
-  const initConnection = async (token) => {
-    const connectionInit = new WebSocket(config.CHAT_WEBSOCKET, token);
-    setConnection(connectionInit);
-
-    connectionInit.onopen = (event) => {
-      console.info("Connected to the chat room.");
-      renderConnect();
-    };
-
-    connectionInit.onclose = (event) => {
-      // If the websocket closes, remove the current chat token
-      setChatToken(null);
-      renderDisconnect(event.reason);
-    };
-
-    connectionInit.onerror = (event) => {
-      console.error("Chat room websocket error observed:", event);
-    };
-
-    connectionInit.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const eventType = data["Type"];
-
-      switch (eventType) {
-        case "EVENT":
-          console.info("Received event:", data);
-          handleEvent(data);
-          break;
-        case "ERROR":
-          console.info("Received error:", data);
-          handleError(data);
-          break;
-        case "MESSAGE":
-          console.info("Received message:", data);
-          const messageType = data.Attributes?.message_type || "MESSAGE";
-          switch (messageType) {
-            case "STICKER":
-              handleSticker(data);
-              break;
-            default:
-              handleMessage(data);
-              break;
-          }
-          break;
-        default:
-          console.error("Unknown message received:", event);
-      }
-    };
-  };
-
-  useEffect(() => {
-    const scrollToBottom = () => {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    };
-    scrollToBottom();
-  });
-
-  useEffect(() => {
-    // If there is no current token, don't request a new token.
-    if (chatToken === null) {
-      return;
-    }
-
-    // If there's a timer that was running previously, clear it
-    if (refreshTimer) {
-      clearTimeout(refreshTimer);
-    }
-
-    // Request a new token after the refresh timeout has passed
-    const timer = setTimeout(() => {
-      // Close the current connection
-      connectionRef.current.close();
-      // Request a new token and connect
-      requestToken(username, moderator, avatar);
-    }, config.TOKEN_REFRESH_IN_MINUTES * 60 * 1000);
-
-    setRefreshTimer(timer);
-
-    // Clear the timer when the component is dismounted.
-    return () => clearTimeout(timer);
-  }, [chatToken]); // eslint-disable-line
-
-  const requestToken = (selectedUsername, isModerator, selectedAvatar) => {
-    // Set application state
-    setUsername(selectedUsername);
-    setModerator(isModerator);
-    setAvatar(selectedAvatar);
-
-    // Generate a unique ID for the user
+  // Fetches a chat token
+  const tokenProvider = async (selectedUsername, isModerator, avatarUrl) => {
     const uuid = uuidv4();
-
-    // Request a chat token for the current user
     const permissions = isModerator
       ? ["SEND_MESSAGE", "DELETE_MESSAGE", "DISCONNECT_USER"]
       : ["SEND_MESSAGE"];
@@ -131,34 +40,133 @@ const Chat = () => {
       userId: `${selectedUsername}.${uuid}`,
       attributes: {
         username: `${selectedUsername}`,
-        avatar: `${selectedAvatar.src}`,
+        avatar: `${avatarUrl.src}`,
       },
       capabilities: permissions,
-      durationInMinutes: config.TOKEN_EXPIRATION_IN_MINUTES,
     };
 
-    axios
-      .post(`${config.API_URL}/auth`, data)
-      .then((response) => {
-        setChatToken(response.data.token);
-        initConnection(response.data.token);
-      })
-      .catch((error) => {
-        setChatToken(null);
-        console.error("Error:", error);
-      });
+    var token;
+    try {
+      const response = await axios.post(`${config.API_URL}/auth`, data);
+      token = {
+        token: response.data.token,
+        sessionExpirationTime: new Date(response.data.sessionExpirationTime),
+        tokenExpirationTime: new Date(response.data.tokenExpirationTime),
+      };
+    } catch (error) {
+      console.error("Error:", error);
+    }
+    
+    return token;
+  }
 
+  const handleSignIn = (selectedUsername, isModerator, avatarUrl) => {
+    // Set application state
+    setUsername(selectedUsername);
+    setModerator(isModerator);
+    setAvatar(avatarUrl);
+
+    // Instantiate a chat room
+    const room = new ChatRoom({
+      regionOrUrl: config.CHAT_REGION,
+      tokenProvider: () => tokenProvider(selectedUsername, isModerator, avatarUrl),
+    });
+    setChatRoom(room);
+
+    // Connect to the chat room
+    room.connect();
+  }
+
+  useEffect(() => {
+    // If chat room listeners are not available, do not continue
+    if (!chatRoom.addListener) {
+      return;
+    }
+
+    // Hide the sign in modal
     setShowSignIn(false);
-    // Focus the input field UI
-    chatRef.current.focus();
-  };
+
+    const unsubscribeOnConnected = chatRoom.addListener('connect', () => {
+      // Connected to the chat room.
+      renderConnect();
+    });
+
+    const unsubscribeOnDisconnected = chatRoom.addListener('disconnect', (reason) => {
+      // Disconnected from the chat room.
+    });
+
+    const unsubscribeOnUserDisconnect = chatRoom.addListener('userDisconnect', (disconnectUserEvent) => {
+      /* Example event payload: 
+       * {
+       *   id: "AYk6xKitV4On",
+       *   userId": "R1BLTDN84zEO",
+       *   reason": "Spam",
+       *   sendTime": new Date("2022-10-11T12:56:41.113Z"),
+       *   requestId": "b379050a-2324-497b-9604-575cb5a9c5cd",
+       *   attributes": { UserId: "R1BLTDN84zEO", Reason: "Spam" }
+       * }
+       */
+      renderDisconnect(disconnectUserEvent.reason);
+     });
+
+    const unsubscribeOnConnecting = chatRoom.addListener('connecting', () => {
+      // Connecting to the chat room.
+    });
+
+    const unsubscribeOnMessageReceived = chatRoom.addListener('message', (message) => {
+      // Received a message
+      const messageType = message.attributes?.message_type || "MESSAGE";
+      switch (messageType) {
+        case "STICKER":
+          handleSticker(message);
+          break;
+        default:
+          handleMessage(message);
+          break;
+      }
+    });
+
+    const unsubscribeOnEventReceived = chatRoom.addListener('event', (event) => {
+      // Received an event
+      handleEvent(event);
+    });
+
+    const unsubscribeOnMessageDeleted = chatRoom.addListener('messageDelete', (deleteEvent) => {
+      // Received message delete event
+      const messageIdToDelete = deleteEvent.messageId;
+      setMessages((prevState) => {
+        // Remove message that matches the MessageID to delete
+        const newState = prevState.filter(
+          (item) => item.messageId !== messageIdToDelete
+        );
+        return newState;
+      });
+    });
+
+    return () => {
+      unsubscribeOnConnected();
+      unsubscribeOnDisconnected();
+      unsubscribeOnUserDisconnect();
+      unsubscribeOnConnecting();
+      unsubscribeOnMessageReceived();
+      unsubscribeOnEventReceived();
+      unsubscribeOnMessageDeleted();
+    };
+  }, [chatRoom]);
+
+  useEffect(() => {
+    const scrollToBottom = () => {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    };
+    scrollToBottom();
+  });
 
   // Handlers
   const handleError = (data) => {
     const username = "";
     const userId = "";
     const avatar = "";
-    const message = `Error ${data["ErrorCode"]}: ${data["ErrorMessage"]}`;
+    const message = `Error ${data.errorCode}: ${data.errorMessage}`;
     const messageId = "";
     const timestamp = `${Date.now()}`;
 
@@ -178,12 +186,12 @@ const Chat = () => {
   };
 
   const handleMessage = (data) => {
-    const username = data["Sender"]["Attributes"]["username"];
-    const userId = data["Sender"]["UserId"];
-    const avatar = data["Sender"]["Attributes"]["avatar"];
-    const message = sanitize(data["Content"]);
-    const messageId = data["Id"];
-    const timestamp = data["SendTime"];
+    const username = data.sender.attributes.username;
+    const userId = data.sender.userId;
+    const avatar = data.sender.attributes.avatar;
+    const message = sanitize(data.content);
+    const messageId = data.id;
+    const timestamp = data.sendTime;
 
     const newMessage = {
       type: "MESSAGE",
@@ -200,21 +208,15 @@ const Chat = () => {
     });
   };
 
-  const handleEvent = (data) => {
-    const eventName = data["EventName"];
+  const handleEvent = (event) => {
+    const eventName = event.eventName;
     switch (eventName) {
       case "aws:DELETE_MESSAGE":
-        const messageIdToDelete = data["Attributes"]["MessageID"];
-        setMessages((prevState) => {
-          // Remove message that matches the MessageID to delete
-          const newState = prevState.filter(
-            (item) => item.messageId !== messageIdToDelete
-          );
-          return newState;
-        });
+        // Ignore system delete message events, as they are handled
+        // by the messageDelete listener on the room.
         break;
       case "app:DELETE_BY_USER":
-        const userIdToDelete = data["Attributes"]["userId"];
+        const userIdToDelete = event.attributes.userId;
         setMessages((prevState) => {
           // Remove message that matches the MessageID to delete
           const newState = prevState.filter(
@@ -224,7 +226,7 @@ const Chat = () => {
         });
         break;
       default:
-        console.info("Unhandled event received:", data);
+        console.info("Unhandled event received:", event);
     }
   };
 
@@ -245,43 +247,48 @@ const Chat = () => {
     }
   };
 
-  const deleteMessageByUserId = (userId) => {
+  const deleteMessageByUserId = async (userId) => {
     // Send a delete event
-    sendEvent({
-      eventName: "app:DELETE_BY_USER",
-      eventAttributes: {
-        userId: userId,
-      },
-    });
+    try {
+      const response = await sendEvent({
+        eventName: "app:DELETE_BY_USER",
+        eventAttributes: {
+          userId: userId,
+        },
+      });
+      return response;
+    } catch (error) {
+      return error;
+    }
   };
 
-  const handleMessageDelete = (e, messageId) => {
-    const data = `{
-        "Action": "DELETE_MESSAGE",
-        "Reason": "Deleted by moderator",
-        "Id": "${messageId}"
-      }`;
-    connection.send(data);
+  const handleMessageDelete = async (messageId) => {
+    const request = new DeleteMessageRequest(messageId, 'Reason for deletion');
+    try {
+      await chatRoom.deleteMessage(request);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleUserKick = (e, userId) => {
-    const data = `{
-        "Action": "DISCONNECT_USER",
-        "Reason": "Kicked by moderator",
-        "UserId": "${userId}"
-      }`;
-    deleteMessageByUserId(userId);
-    connection.send(data);
+  const handleUserKick = async (userId) => {
+    const request = new DisconnectUserRequest(userId, 'Kicked by moderator');
+    try {
+      await chatRoom.disconnectUser(request);
+      await deleteMessageByUserId(userId);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleSticker = (data) => {
-    const username = data["Sender"]["Attributes"]["username"];
-    const userId = data["Sender"]["UserId"];
-    const avatar = data["Sender"]["Attributes"]["avatar"];
-    const message = sanitize(data["Content"]);
-    const sticker = data["Attributes"]["sticker_src"];
-    const messageId = data["Id"];
-    const timestamp = data["SendTime"];
+    const username = data.sender.attributes?.username;
+    const userId = data.sender.userId;
+    const avatar = data.sender.attributes.avatar;
+    const message = sanitize(data.content);
+    const sticker = data.attributes.sticker_src;
+    const messageId = data.id;
+    const timestamp = data.sendTime;
 
     const newMessage = {
       type: "STICKER",
@@ -299,94 +306,48 @@ const Chat = () => {
     });
   };
 
-  const handleStickerSend = (sticker) => {
-    const uuid = uuidv4();
-    const data = `{
-      "requestId": "${uuid}",
-      "action": "SEND_MESSAGE",
-      "content": "Sticker: ${sticker.name}",
-      "attributes": {
-        "message_type": "STICKER",
-        "sticker_src": "${sticker.src}"
-      }
-    }`;
-    connection.send(data);
+  const handleStickerSend = async (sticker) => {
+    const content = `Sticker: ${sticker.name}`;
+    const attributes = {
+      message_type: "STICKER",
+      sticker_src: `${sticker.src}`
+    }
+    const request = new SendMessageRequest(content, attributes);
+    try {
+      await chatRoom.sendMessage(request);
+    } catch (error) {
+      handleError(error);
+    }
   };
 
-  // Helpers
-
-  const sanitize = (string) => {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#x27;',
-        "/": '&#x2F;',
-        "`": '&grave;'
-    };
-    const reg = /[&<>"'/]/ig;
-    return string.replace(reg, (match)=>(map[match]));
-  }
-
-  const sendMessage = (message) => {
-    const uuid = uuidv4();
-    const data = `{
-      "requestId": "${uuid}",
-      "action": "SEND_MESSAGE",
-      "content": "${message.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"
-    }`;
-    connection.send(data);
+  const sendMessage = async (message) => {
+    const content = `${message.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}`;
+    const request = new SendMessageRequest(content);
+    try {
+      await chatRoom.sendMessage(request);
+    } catch (error) {
+      handleError(error);
+    }
   };
 
-  const sendEvent = (data) => {
+  const sendEvent = async (data) => {
     const formattedData = {
       arn: config.CHAT_ROOM_ID,
       eventName: `${data.eventName}`,
       eventAttributes: data.eventAttributes,
     };
-    axios
-      .post(`${config.API_URL}/event`, formattedData)
-      .then((response) => {
-        console.info("SendEvent Success:", response.data);
-      })
-      .catch((error) => {
-        console.error("SendEvent Error:", error);
-      });
-  };
 
-  const uuidv4 = () => {
-    // eslint-disable-next-line
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-      /[xy]/g,
-      function (c) {
-        // eslint-disable-next-line
-        var r = (Math.random() * 16) | 0,
-          v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      }
-    );
-  };
-
-  const parseUrls = (userInput) => {
-    var urlRegExp =
-      /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_.~#?&//=]*)/g;
-    let formattedMessage = userInput.replace(urlRegExp, (match) => {
-      let formattedMatch = match;
-      if (!match.startsWith("http")) {
-        formattedMatch = `http://${match}`;
-      }
-      return `<a href=${formattedMatch} class="chat-line__link" target="_blank" rel="noopener noreferrer">${match}</a>`;
-    });
-    return formattedMessage;
-  };
-
-  const socketActive = () => {
-    return connection?.readyState === 1;
+    try {
+      const response = await axios.post(`${config.API_URL}/event`, formattedData);
+      console.info("SendEvent Success:", response.data);
+      return response;
+    } catch (error) {
+      console.error("SendEvent Error:", error);
+      return error;
+    }
   };
 
   // Renderers
-
   const renderErrorMessage = (errorMessage) => {
     return (
       <div className="error-line" key={errorMessage.timestamp}>
@@ -410,7 +371,7 @@ const Chat = () => {
           className="chat-line-btn"
           onClick={(e) => {
             e.preventDefault();
-            handleMessageDelete(e, message.messageId);
+            handleMessageDelete(message.messageId);
           }}
         >
           <svg
@@ -427,7 +388,7 @@ const Chat = () => {
           className="chat-line-btn"
           onClick={(e) => {
             e.preventDefault();
-            handleUserKick(e, message.userId);
+            handleUserKick(message.userId);
           }}
         >
           <svg
@@ -467,8 +428,8 @@ const Chat = () => {
   const renderMessage = (message) => {
     const formattedMessage = parseUrls(message.message);
     return (
-      <div className="chat-line-wrapper" key={message.timestamp}>
-        <div className="chat-line" key={message.timestamp}>
+      <div className="chat-line-wrapper" key={message.id}>
+        <div className="chat-line">
           <img
             className="chat-line-img"
             src={message.avatar}
@@ -507,30 +468,13 @@ const Chat = () => {
   };
 
   const renderDisconnect = (reason) => {
-    // The reason for a disconnect can be a string (if kicked), or a
-    // JSON string (if token is timed out)
-    var parsedReason;
-    try {
-      // If reason is a JSON string, parse it
-      parsedReason = JSON.parse(reason);
-    } catch (e) {
-      // If reason is not a JSON string, don't parse it
-      parsedReason = reason;
-    }
-
-    // If parsed reason is JSON, format it.
-    var message = parsedReason;
-    if (typeof parsedReason === "object") {
-      message = parsedReason.ErrorMessage;
-    }
-
     const error = {
       type: "ERROR",
       timestamp: `${Date.now()}`,
       username: "",
       userId: "",
       avatar: "",
-      message: `Connection closed. Reason: ${message}`,
+      message: `Connection closed. Reason: ${reason}`,
     };
     setMessages((prevState) => {
       return [...prevState, error];
@@ -550,6 +494,11 @@ const Chat = () => {
       return [...prevState, status];
     });
   };
+
+  const isChatConnected = () => {
+    const chatState = chatRoom.state;
+    return chatState === "connected";
+  }
 
   return (
     <>
@@ -571,15 +520,15 @@ const Chat = () => {
                   className={`rounded mg-r-1 ${!username ? "hidden" : ""}`}
                   type="text"
                   placeholder={
-                    socketActive() ? "Say something" : "Waiting to connect..."
+                    isChatConnected() ? "Say something" : "Waiting to connect..."
                   }
                   value={message}
                   maxLength={500}
-                  disabled={!socketActive()}
+                  disabled={!isChatConnected()}
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
-                {socketActive() && (
+                {isChatConnected() && (
                   <StickerPicker handleStickerSend={handleStickerSend} />
                 )}
                 {!username && (
@@ -596,7 +545,7 @@ const Chat = () => {
             </div>
           </div>
         </div>
-        {showSignIn && <SignIn requestToken={requestToken} />}
+        {showSignIn && <SignIn handleSignIn={handleSignIn} />}
       </div>
     </>
   );

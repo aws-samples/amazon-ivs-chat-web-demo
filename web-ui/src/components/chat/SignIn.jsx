@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT-0
 
 import React, { useState, createRef, useEffect } from "react";
-import PropTypes from "prop-types";
 import Avatars from "./Avatars";
 
-const SignIn = ({ requestToken }) => {
+const SignIn = ({ handleSignIn }) => {
   const [username, setUsername] = useState("");
   const [moderator, setModerator] = useState(false);
   const [avatar, setAvatar] = useState({});
@@ -69,7 +68,7 @@ const SignIn = ({ requestToken }) => {
             <hr />
             <button
               onClick={(e) => {
-                requestToken(username, moderator, avatar);
+                handleSignIn(username, moderator, avatar);
               }}
               className="btn btn--primary rounded mg-t-1"
               disabled={!username}
@@ -82,10 +81,6 @@ const SignIn = ({ requestToken }) => {
       <div className="modal__overlay"></div>
     </div>
   );
-};
-
-SignIn.propTypes = {
-  requestToken: PropTypes.func,
 };
 
 export default SignIn;
