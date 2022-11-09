@@ -20,7 +20,6 @@ const Chat = () => {
   const [showSignIn, setShowSignIn] = useState(true);
   const [username, setUsername] = useState("");
   const [moderator, setModerator] = useState(false);
-  const [avatar, setAvatar] = useState({});
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [chatRoom, setChatRoom] = useState([]);
@@ -64,7 +63,6 @@ const Chat = () => {
     // Set application state
     setUsername(selectedUsername);
     setModerator(isModerator);
-    setAvatar(avatarUrl);
 
     // Instantiate a chat room
     const room = new ChatRoom({
