@@ -1,26 +1,32 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import React, { useEffect, useState, createRef } from "react";
-import axios from "axios";
-import { ChatRoom, DeleteMessageRequest, DisconnectUserRequest, SendMessageRequest } from "amazon-ivs-chat-messaging";
-import { uuidv4, parseUrls, sanitize } from "../../helpers"
+import React, { useEffect, useState, createRef } from 'react';
+import Linkify from 'linkify-react';
+import axios from 'axios';
+import {
+  ChatRoom,
+  DeleteMessageRequest,
+  DisconnectUserRequest,
+  SendMessageRequest,
+} from 'amazon-ivs-chat-messaging';
+import { uuidv4 } from '../../helpers';
 
-import * as config from "../../config";
+import * as config from '../../config';
 
 // Components
-import VideoPlayer from "../videoPlayer/VideoPlayer";
-import SignIn from "./SignIn";
-import StickerPicker from "./StickerPicker";
+import VideoPlayer from '../videoPlayer/VideoPlayer';
+import SignIn from './SignIn';
+import StickerPicker from './StickerPicker';
 
 // Styles
-import "./Chat.css";
+import './Chat.css';
 
 const Chat = () => {
   const [showSignIn, setShowSignIn] = useState(true);
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState('');
   const [moderator, setModerator] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [chatRoom, setChatRoom] = useState([]);
 
@@ -31,8 +37,8 @@ const Chat = () => {
   const tokenProvider = async (selectedUsername, isModerator, avatarUrl) => {
     const uuid = uuidv4();
     const permissions = isModerator
-      ? ["SEND_MESSAGE", "DELETE_MESSAGE", "DISCONNECT_USER"]
-      : ["SEND_MESSAGE"];
+      ? ['SEND_MESSAGE', 'DELETE_MESSAGE', 'DISCONNECT_USER']
+      : ['SEND_MESSAGE'];
 
     const data = {
       arn: config.CHAT_ROOM_ID,
@@ -53,11 +59,11 @@ const Chat = () => {
         tokenExpirationTime: new Date(response.data.tokenExpirationTime),
       };
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Error:', error);
     }
-    
+
     return token;
-  }
+  };
 
   const handleSignIn = (selectedUsername, isModerator, avatarUrl) => {
     // Set application state
@@ -67,13 +73,14 @@ const Chat = () => {
     // Instantiate a chat room
     const room = new ChatRoom({
       regionOrUrl: config.CHAT_REGION,
-      tokenProvider: () => tokenProvider(selectedUsername, isModerator, avatarUrl),
+      tokenProvider: () =>
+        tokenProvider(selectedUsername, isModerator, avatarUrl),
     });
     setChatRoom(room);
 
     // Connect to the chat room
     room.connect();
-  }
+  };
 
   useEffect(() => {
     // If chat room listeners are not available, do not continue
@@ -89,57 +96,72 @@ const Chat = () => {
       renderConnect();
     });
 
-    const unsubscribeOnDisconnected = chatRoom.addListener('disconnect', (reason) => {
-      // Disconnected from the chat room.
-    });
+    const unsubscribeOnDisconnected = chatRoom.addListener(
+      'disconnect',
+      (reason) => {
+        // Disconnected from the chat room.
+      }
+    );
 
-    const unsubscribeOnUserDisconnect = chatRoom.addListener('userDisconnect', (disconnectUserEvent) => {
-      /* Example event payload: 
-       * {
-       *   id: "AYk6xKitV4On",
-       *   userId": "R1BLTDN84zEO",
-       *   reason": "Spam",
-       *   sendTime": new Date("2022-10-11T12:56:41.113Z"),
-       *   requestId": "b379050a-2324-497b-9604-575cb5a9c5cd",
-       *   attributes": { UserId: "R1BLTDN84zEO", Reason: "Spam" }
-       * }
-       */
-      renderDisconnect(disconnectUserEvent.reason);
-     });
+    const unsubscribeOnUserDisconnect = chatRoom.addListener(
+      'userDisconnect',
+      (disconnectUserEvent) => {
+        /* Example event payload:
+         * {
+         *   id: "AYk6xKitV4On",
+         *   userId": "R1BLTDN84zEO",
+         *   reason": "Spam",
+         *   sendTime": new Date("2022-10-11T12:56:41.113Z"),
+         *   requestId": "b379050a-2324-497b-9604-575cb5a9c5cd",
+         *   attributes": { UserId: "R1BLTDN84zEO", Reason: "Spam" }
+         * }
+         */
+        renderDisconnect(disconnectUserEvent.reason);
+      }
+    );
 
     const unsubscribeOnConnecting = chatRoom.addListener('connecting', () => {
       // Connecting to the chat room.
     });
 
-    const unsubscribeOnMessageReceived = chatRoom.addListener('message', (message) => {
-      // Received a message
-      const messageType = message.attributes?.message_type || "MESSAGE";
-      switch (messageType) {
-        case "STICKER":
-          handleSticker(message);
-          break;
-        default:
-          handleMessage(message);
-          break;
+    const unsubscribeOnMessageReceived = chatRoom.addListener(
+      'message',
+      (message) => {
+        // Received a message
+        const messageType = message.attributes?.message_type || 'MESSAGE';
+        switch (messageType) {
+          case 'STICKER':
+            handleSticker(message);
+            break;
+          default:
+            handleMessage(message);
+            break;
+        }
       }
-    });
+    );
 
-    const unsubscribeOnEventReceived = chatRoom.addListener('event', (event) => {
-      // Received an event
-      handleEvent(event);
-    });
+    const unsubscribeOnEventReceived = chatRoom.addListener(
+      'event',
+      (event) => {
+        // Received an event
+        handleEvent(event);
+      }
+    );
 
-    const unsubscribeOnMessageDeleted = chatRoom.addListener('messageDelete', (deleteEvent) => {
-      // Received message delete event
-      const messageIdToDelete = deleteEvent.messageId;
-      setMessages((prevState) => {
-        // Remove message that matches the MessageID to delete
-        const newState = prevState.filter(
-          (item) => item.messageId !== messageIdToDelete
-        );
-        return newState;
-      });
-    });
+    const unsubscribeOnMessageDeleted = chatRoom.addListener(
+      'messageDelete',
+      (deleteEvent) => {
+        // Received message delete event
+        const messageIdToDelete = deleteEvent.messageId;
+        setMessages((prevState) => {
+          // Remove message that matches the MessageID to delete
+          const newState = prevState.filter(
+            (item) => item.messageId !== messageIdToDelete
+          );
+          return newState;
+        });
+      }
+    );
 
     return () => {
       unsubscribeOnConnected();
@@ -154,22 +176,22 @@ const Chat = () => {
 
   useEffect(() => {
     const scrollToBottom = () => {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     };
     scrollToBottom();
   });
 
   // Handlers
   const handleError = (data) => {
-    const username = "";
-    const userId = "";
-    const avatar = "";
+    const username = '';
+    const userId = '';
+    const avatar = '';
     const message = `Error ${data.errorCode}: ${data.errorMessage}`;
-    const messageId = "";
+    const messageId = '';
     const timestamp = `${Date.now()}`;
 
     const newMessage = {
-      type: "ERROR",
+      type: 'ERROR',
       timestamp,
       username,
       userId,
@@ -187,12 +209,12 @@ const Chat = () => {
     const username = data.sender.attributes.username;
     const userId = data.sender.userId;
     const avatar = data.sender.attributes.avatar;
-    const message = sanitize(data.content);
+    const message = data.content;
     const messageId = data.id;
     const timestamp = data.sendTime;
 
     const newMessage = {
-      type: "MESSAGE",
+      type: 'MESSAGE',
       timestamp,
       username,
       userId,
@@ -209,11 +231,11 @@ const Chat = () => {
   const handleEvent = (event) => {
     const eventName = event.eventName;
     switch (eventName) {
-      case "aws:DELETE_MESSAGE":
+      case 'aws:DELETE_MESSAGE':
         // Ignore system delete message events, as they are handled
         // by the messageDelete listener on the room.
         break;
-      case "app:DELETE_BY_USER":
+      case 'app:DELETE_BY_USER':
         const userIdToDelete = event.attributes.userId;
         setMessages((prevState) => {
           // Remove message that matches the MessageID to delete
@@ -224,7 +246,7 @@ const Chat = () => {
         });
         break;
       default:
-        console.info("Unhandled event received:", event);
+        console.info('Unhandled event received:', event);
     }
   };
 
@@ -237,10 +259,10 @@ const Chat = () => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       if (message) {
         sendMessage(message);
-        setMessage("");
+        setMessage('');
       }
     }
   };
@@ -249,7 +271,7 @@ const Chat = () => {
     // Send a delete event
     try {
       const response = await sendEvent({
-        eventName: "app:DELETE_BY_USER",
+        eventName: 'app:DELETE_BY_USER',
         eventAttributes: {
           userId: userId,
         },
@@ -283,13 +305,13 @@ const Chat = () => {
     const username = data.sender.attributes?.username;
     const userId = data.sender.userId;
     const avatar = data.sender.attributes.avatar;
-    const message = sanitize(data.content);
+    const message = data.content;
     const sticker = data.attributes.sticker_src;
     const messageId = data.id;
     const timestamp = data.sendTime;
 
     const newMessage = {
-      type: "STICKER",
+      type: 'STICKER',
       timestamp,
       username,
       userId,
@@ -307,9 +329,9 @@ const Chat = () => {
   const handleStickerSend = async (sticker) => {
     const content = `Sticker: ${sticker.name}`;
     const attributes = {
-      message_type: "STICKER",
-      sticker_src: `${sticker.src}`
-    }
+      message_type: 'STICKER',
+      sticker_src: `${sticker.src}`,
+    };
     const request = new SendMessageRequest(content, attributes);
     try {
       await chatRoom.sendMessage(request);
@@ -319,7 +341,7 @@ const Chat = () => {
   };
 
   const sendMessage = async (message) => {
-    const content = `${message.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}`;
+    const content = `${message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}`;
     const request = new SendMessageRequest(content);
     try {
       await chatRoom.sendMessage(request);
@@ -336,11 +358,14 @@ const Chat = () => {
     };
 
     try {
-      const response = await axios.post(`${config.API_URL}/event`, formattedData);
-      console.info("SendEvent Success:", response.data);
+      const response = await axios.post(
+        `${config.API_URL}/event`,
+        formattedData
+      );
+      console.info('SendEvent Success:', response.data);
       return response;
     } catch (error) {
-      console.error("SendEvent Error:", error);
+      console.error('SendEvent Error:', error);
       return error;
     }
   };
@@ -348,7 +373,7 @@ const Chat = () => {
   // Renderers
   const renderErrorMessage = (errorMessage) => {
     return (
-      <div className="error-line" key={errorMessage.timestamp}>
+      <div className='error-line' key={errorMessage.timestamp}>
         <p>{errorMessage.message}</p>
       </div>
     );
@@ -356,7 +381,7 @@ const Chat = () => {
 
   const renderSuccessMessage = (successMessage) => {
     return (
-      <div className="success-line" key={successMessage.timestamp}>
+      <div className='success-line' key={successMessage.timestamp}>
         <p>{successMessage.message}</p>
       </div>
     );
@@ -366,39 +391,39 @@ const Chat = () => {
     return (
       <>
         <button
-          className="chat-line-btn"
+          className='chat-line-btn'
           onClick={(e) => {
             e.preventDefault();
             handleMessageDelete(message.messageId);
           }}
         >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="24px"
-            viewBox="0 0 24 24"
-            width="24px"
+            xmlns='http://www.w3.org/2000/svg'
+            height='24px'
+            viewBox='0 0 24 24'
+            width='24px'
           >
-            <path d="M0 0h24v24H0z" fill="none" />
-            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+            <path d='M0 0h24v24H0z' fill='none' />
+            <path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z' />
           </svg>
         </button>
         <button
-          className="chat-line-btn"
+          className='chat-line-btn'
           onClick={(e) => {
             e.preventDefault();
             handleUserKick(message.userId);
           }}
         >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            enableBackground="new 0 0 24 24"
-            height="24px"
-            viewBox="0 0 24 24"
-            width="24px"
+            xmlns='http://www.w3.org/2000/svg'
+            enableBackground='new 0 0 24 24'
+            height='24px'
+            viewBox='0 0 24 24'
+            width='24px'
           >
-            <rect fill="none" height="24" width="24" />
+            <rect fill='none' height='24' width='24' />
             <g>
-              <path d="M8.65,5.82C9.36,4.72,10.6,4,12,4c2.21,0,4,1.79,4,4c0,1.4-0.72,2.64-1.82,3.35L8.65,5.82z M20,17.17 c-0.02-1.1-0.63-2.11-1.61-2.62c-0.54-0.28-1.13-0.54-1.77-0.76L20,17.17z M21.19,21.19L2.81,2.81L1.39,4.22l8.89,8.89 c-1.81,0.23-3.39,0.79-4.67,1.45C4.61,15.07,4,16.1,4,17.22V20h13.17l2.61,2.61L21.19,21.19z" />
+              <path d='M8.65,5.82C9.36,4.72,10.6,4,12,4c2.21,0,4,1.79,4,4c0,1.4-0.72,2.64-1.82,3.35L8.65,5.82z M20,17.17 c-0.02-1.1-0.63-2.11-1.61-2.62c-0.54-0.28-1.13-0.54-1.77-0.76L20,17.17z M21.19,21.19L2.81,2.81L1.39,4.22l8.89,8.89 c-1.81,0.23-3.39,0.79-4.67,1.45C4.61,15.07,4,16.1,4,17.22V20h13.17l2.61,2.61L21.19,21.19z' />
             </g>
           </svg>
         </button>
@@ -407,38 +432,46 @@ const Chat = () => {
   };
 
   const renderStickerMessage = (message) => (
-    <div className="chat-line-sticker-wrapper" key={message.timestamp}>
-      <div className="chat-line chat-line--sticker" key={message.timestamp}>
+    <div className='chat-line-sticker-wrapper' key={message.timestamp}>
+      <div className='chat-line chat-line--sticker' key={message.timestamp}>
         <img
-          className="chat-line-img"
+          className='chat-line-img'
           src={message.avatar}
           alt={`Avatar for ${message.username}`}
         />
         <p>
-          <span className="username">{message.username}</span>
+          <span className='username'>{message.username}</span>
         </p>
-        <img className="chat-sticker" src={message.sticker} alt={`sticker`} />
+        <img className='chat-sticker' src={message.sticker} alt={`sticker`} />
       </div>
-      {moderator ? renderChatLineActions(message) : ""}
+      {moderator ? renderChatLineActions(message) : ''}
     </div>
   );
 
   const renderMessage = (message) => {
-    const formattedMessage = parseUrls(message.message);
     return (
-      <div className="chat-line-wrapper" key={message.id}>
-        <div className="chat-line">
+      <div className='chat-line-wrapper' key={message.id}>
+        <div className='chat-line'>
           <img
-            className="chat-line-img"
+            className='chat-line-img'
             src={message.avatar}
             alt={`Avatar for ${message.username}`}
           />
           <p>
-            <span className="username">{message.username}</span>
-            <span dangerouslySetInnerHTML={{ __html: formattedMessage }} />
+            <span className='username'>{message.username}</span>
+            <Linkify
+              options={{
+                ignoreTags: ['script', 'style'],
+                nl2br: true,
+                rel: 'noopener noreferrer',
+                target: '_blank',
+              }}
+            >
+              {message.message}
+            </Linkify>
           </p>
         </div>
-        {moderator ? renderChatLineActions(message) : ""}
+        {moderator ? renderChatLineActions(message) : ''}
       </div>
     );
   };
@@ -446,20 +479,20 @@ const Chat = () => {
   const renderMessages = () => {
     return messages.map((message) => {
       switch (message.type) {
-        case "ERROR":
+        case 'ERROR':
           const errorMessage = renderErrorMessage(message);
           return errorMessage;
-        case "SUCCESS":
+        case 'SUCCESS':
           const successMessage = renderSuccessMessage(message);
           return successMessage;
-        case "STICKER":
+        case 'STICKER':
           const stickerMessage = renderStickerMessage(message);
           return stickerMessage;
-        case "MESSAGE":
+        case 'MESSAGE':
           const textMessage = renderMessage(message);
           return textMessage;
         default:
-          console.info("Received unsupported message:", message);
+          console.info('Received unsupported message:', message);
           return <></>;
       }
     });
@@ -467,11 +500,11 @@ const Chat = () => {
 
   const renderDisconnect = (reason) => {
     const error = {
-      type: "ERROR",
+      type: 'ERROR',
       timestamp: `${Date.now()}`,
-      username: "",
-      userId: "",
-      avatar: "",
+      username: '',
+      userId: '',
+      avatar: '',
       message: `Connection closed. Reason: ${reason}`,
     };
     setMessages((prevState) => {
@@ -481,11 +514,11 @@ const Chat = () => {
 
   const renderConnect = () => {
     const status = {
-      type: "SUCCESS",
+      type: 'SUCCESS',
       timestamp: `${Date.now()}`,
-      username: "",
-      userId: "",
-      avatar: "",
+      username: '',
+      userId: '',
+      avatar: '',
       message: `Connected to the chat room.`,
     };
     setMessages((prevState) => {
@@ -495,30 +528,32 @@ const Chat = () => {
 
   const isChatConnected = () => {
     const chatState = chatRoom.state;
-    return chatState === "connected";
-  }
+    return chatState === 'connected';
+  };
 
   return (
     <>
       <header>
         <h1>Amazon IVS Chat Web Demo</h1>
       </header>
-      <div className="main full-width full-height chat-container">
-        <div className="content-wrapper mg-2">
+      <div className='main full-width full-height chat-container'>
+        <div className='content-wrapper mg-2'>
           <VideoPlayer playbackUrl={config.PLAYBACK_URL} />
-          <div className="col-wrapper">
-            <div className="chat-wrapper">
-              <div className="messages">
+          <div className='col-wrapper'>
+            <div className='chat-wrapper'>
+              <div className='messages'>
                 {renderMessages()}
                 <div ref={messagesEndRef} />
               </div>
-              <div className="composer fl fl-j-center">
+              <div className='composer fl fl-j-center'>
                 <input
                   ref={chatRef}
-                  className={`rounded mg-r-1 ${!username ? "hidden" : ""}`}
-                  type="text"
+                  className={`rounded mg-r-1 ${!username ? 'hidden' : ''}`}
+                  type='text'
                   placeholder={
-                    isChatConnected() ? "Say something" : "Waiting to connect..."
+                    isChatConnected()
+                      ? 'Say something'
+                      : 'Waiting to connect...'
                   }
                   value={message}
                   maxLength={500}
@@ -533,7 +568,7 @@ const Chat = () => {
                   <fieldset>
                     <button
                       onClick={handleOnClick}
-                      className="btn btn--primary full-width rounded"
+                      className='btn btn--primary full-width rounded'
                     >
                       Join the chat room
                     </button>
