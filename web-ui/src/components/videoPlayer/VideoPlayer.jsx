@@ -1,20 +1,24 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 // Styles
 import "./VideoPlayer.css";
 
-const VideoPlayer = ({ playbackUrl }) => {
+const VideoPlayer = ({ usernameRaisedHand, showRaiseHandPopup, playbackUrl }) => {
+  const renderRaiseHandPopup = (username) => {
+    if (showRaiseHandPopup) {
+      return <div className="raise-hand">{username} raised their hand</div>;
+    }
+  };
+
   useEffect(() => {
     const MediaPlayerPackage = window.IVSPlayer;
 
     // First, check if the browser supports the Amazon IVS player.
     if (!MediaPlayerPackage.isPlayerSupported) {
-      console.warn(
-        "The current browser does not support the Amazon IVS player."
-      );
+      console.warn("The current browser does not support the Amazon IVS player.");
       return;
     }
 
@@ -46,16 +50,14 @@ const VideoPlayer = ({ playbackUrl }) => {
   }, []); // eslint-disable-line
 
   return (
-    <div className="player-wrapper">
-      <div className="aspect-169 pos-relative full-width full-height">
-        <video
-          id="video-player"
-          className="video-elem pos-absolute full-width"
-          playsInline
-          muted
-        ></video>
+    <React.Fragment>
+      <div className="player-wrapper">
+        <div className="aspect-169 pos-relative full-width full-height">
+          <video id="video-player" className="video-elem pos-absolute full-width" playsInline muted></video>
+        </div>
+        {renderRaiseHandPopup(usernameRaisedHand)}
       </div>
-    </div>
+    </React.Fragment>
   );
 };
 
