@@ -312,12 +312,11 @@ const Chat = () => {
 
   const handleRaiseHand = async (data) => {
     const username = data.sender.attributes?.username;
+    setUsernameRaisedHand(data.sender.attributes?.username);
 
     if (previousRaiseHandUsername.current !== data.sender.attributes?.username) {
-      setUsernameRaisedHand(data.sender.attributes?.username);
       setShowRaiseHandPopup(true);
     } else {
-      setUsernameRaisedHand(data.sender.attributes?.username);
       setShowRaiseHandPopup((showRaiseHandPopup) => !showRaiseHandPopup);
     }
   };
