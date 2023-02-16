@@ -8,6 +8,7 @@
   --color-bg-chat-sticker: #fee77f;
   --chat-width: 600px;
   --sticker-columns: repeat(5, 1fr);
+  --hand-raise-transform: translateY(-0.4rem);
 }
 
 .main {
@@ -98,13 +99,72 @@
   color: var(--color-text-hint);
 }
 
+.raise-hand-btn {
+  fill: currentColor;
+  position: relative;
+  overflow: visible;
+}
+
+.raise-hand-btn:before {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  content: '\2191'; /* up arrow */
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  z-index: 9;
+  border-radius: 1.2rem;
+  font-size: 1.2rem;
+  color: inherit;
+  background: inherit;
+  border: 2px solid var(--color-bg-chat);
+  font-weight: bold;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0rem);
+}
+
+.raise-hand-btn:hover:before {
+  background: var(--color--positive);
+  color: var(--color-text-inverted);
+  transform: translateY(0rem);
+}
+
+.raise-hand-btn:focus:before {
+  border-color: var(--color-bg-primary);
+}
+
+.raise-hand-btn--raised {
+  background-color: var(--color-bg-inverted);
+  color: var(--color-text-inverted);
+}
+
+.raise-hand-btn--raised:before {
+  content: '\2193'; /* down arrow */
+  background: var(--color--destructive);
+  transform: var(--hand-raise-transform);
+}
+
+.raise-hand-btn--raised:hover:before {
+  background: var(--color--destructive);
+  color: var(--color-text-inverted);
+  transform: translateY(0rem);
+}
+
+.raise-hand-btn--raised:focus:before,
+.raise-hand-btn--raised:hover:before {
+  color: var(--color-text-inverted);
+}
+
 .input-line-btn:hover {
-  color: var(--color-text-destructive);
+  color: var(--color-text-base);
   background-color: var(--color-bg-button-hover);
 }
 
 .input-line-btn:focus {
-  color: var(--color-text-destructive);
+  color: var(--color-text-base);
   border-color: var(--color-bg-primary);
   background: var(--color-bg-button-focus);
 }
@@ -187,7 +247,7 @@
 }
 
 .chat-line .username::after {
-  content: "\00a0 ";
+  content: '\00a0 ';
 }
 
 .chat-line--sticker {

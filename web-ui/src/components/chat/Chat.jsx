@@ -1,19 +1,39 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+<<<<<<< Updated upstream
 import React, { useEffect, useState, useRef, createRef } from "react";
 import Linkify from "linkify-react";
 import axios from "axios";
 import { ChatRoom, DeleteMessageRequest, DisconnectUserRequest, SendMessageRequest } from "amazon-ivs-chat-messaging";
 import { uuidv4 } from "../../helpers";
+=======
+import React, { useEffect, useState, useRef, createRef } from 'react';
+import Linkify from 'linkify-react';
+import axios from 'axios';
+import {
+  ChatRoom,
+  DeleteMessageRequest,
+  DisconnectUserRequest,
+  SendMessageRequest,
+} from 'amazon-ivs-chat-messaging';
+import { uuidv4 } from '../../helpers';
+>>>>>>> Stashed changes
 
 import * as config from "../../config";
 
 // Components
+<<<<<<< Updated upstream
 import VideoPlayer from "../videoPlayer/VideoPlayer";
 import SignIn from "./SignIn";
 import StickerPicker from "./StickerPicker";
 import RaiseHand from "./RaiseHand";
+=======
+import VideoPlayer from '../videoPlayer/VideoPlayer';
+import SignIn from './SignIn';
+import StickerPicker from './StickerPicker';
+import RaiseHand from './RaiseHand';
+>>>>>>> Stashed changes
 
 // Styles
 import "./Chat.css";
@@ -27,6 +47,10 @@ const Chat = () => {
   const [chatRoom, setChatRoom] = useState([]);
   const [showRaiseHandPopup, setShowRaiseHandPopup] = useState(false);
   const [usernameRaisedHand, setUsernameRaisedHand] = useState(null);
+<<<<<<< Updated upstream
+=======
+  const [handRaised, setHandRaised] = useState(false);
+>>>>>>> Stashed changes
   const previousRaiseHandUsername = useRef(null);
 
   const chatRef = createRef();
@@ -114,6 +138,7 @@ const Chat = () => {
       // Connecting to the chat room.
     });
 
+<<<<<<< Updated upstream
     const unsubscribeOnMessageReceived = chatRoom.addListener("message", (message) => {
       // Received a message
       const messageType = message.attributes?.message_type || "MESSAGE";
@@ -127,6 +152,24 @@ const Chat = () => {
         default:
           handleMessage(message);
           break;
+=======
+    const unsubscribeOnMessageReceived = chatRoom.addListener(
+      'message',
+      (message) => {
+        // Received a message
+        const messageType = message.attributes?.message_type || 'MESSAGE';
+        switch (messageType) {
+          case 'RAISE_HAND':
+            handleRaiseHand(message);
+            break;
+          case 'STICKER':
+            handleSticker(message);
+            break;
+          default:
+            handleMessage(message);
+            break;
+        }
+>>>>>>> Stashed changes
       }
     });
 
@@ -312,9 +355,15 @@ const Chat = () => {
 
   const handleRaiseHand = async (data) => {
     const username = data.sender.attributes?.username;
+<<<<<<< Updated upstream
     setUsernameRaisedHand(data.sender.attributes?.username);
 
     if (previousRaiseHandUsername.current !== data.sender.attributes?.username) {
+=======
+    setUsernameRaisedHand(username);
+
+    if (previousRaiseHandUsername.current !== username) {
+>>>>>>> Stashed changes
       setShowRaiseHandPopup(true);
     } else {
       setShowRaiseHandPopup((showRaiseHandPopup) => !showRaiseHandPopup);
@@ -337,12 +386,20 @@ const Chat = () => {
 
   const handleRaiseHandSend = async () => {
     const attributes = {
+<<<<<<< Updated upstream
       message_type: "RAISE_HAND",
+=======
+      message_type: 'RAISE_HAND',
+>>>>>>> Stashed changes
     };
 
     const request = new SendMessageRequest(`[raise hand event]`, attributes);
     try {
       await chatRoom.sendMessage(request);
+<<<<<<< Updated upstream
+=======
+      setHandRaised((prevState) => !prevState);
+>>>>>>> Stashed changes
     } catch (error) {
       handleError(error);
     }
@@ -522,12 +579,25 @@ const Chat = () => {
       <header>
         <h1>Amazon IVS Chat Web Demo</h1>
       </header>
+<<<<<<< Updated upstream
       <div className="main full-width full-height chat-container">
         <div className="content-wrapper mg-2">
           <VideoPlayer usernameRaisedHand={usernameRaisedHand} showRaiseHandPopup={showRaiseHandPopup} playbackUrl={config.PLAYBACK_URL} />
           <div className="col-wrapper">
             <div className="chat-wrapper">
               <div className="messages">
+=======
+      <div className='main full-width full-height chat-container'>
+        <div className='content-wrapper mg-2'>
+          <VideoPlayer
+            usernameRaisedHand={usernameRaisedHand}
+            showRaiseHandPopup={showRaiseHandPopup}
+            playbackUrl={config.PLAYBACK_URL}
+          />
+          <div className='col-wrapper'>
+            <div className='chat-wrapper'>
+              <div className='messages'>
+>>>>>>> Stashed changes
                 {renderMessages()}
                 <div ref={messagesEndRef} />
               </div>
@@ -543,8 +613,20 @@ const Chat = () => {
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
+<<<<<<< Updated upstream
                 {isChatConnected() && <StickerPicker handleStickerSend={handleStickerSend} />}
                 {isChatConnected() && <RaiseHand handleRaiseHandSend={handleRaiseHandSend} />}
+=======
+                {isChatConnected() && (
+                  <StickerPicker handleStickerSend={handleStickerSend} />
+                )}
+                {isChatConnected() && (
+                  <RaiseHand
+                    isRaised={handRaised}
+                    handleRaiseHandSend={handleRaiseHandSend}
+                  />
+                )}
+>>>>>>> Stashed changes
                 {!username && (
                   <fieldset>
                     <button onClick={handleOnClick} className="btn btn--primary full-width rounded">
