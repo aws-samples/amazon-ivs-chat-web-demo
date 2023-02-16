@@ -11,8 +11,6 @@
   background: #000;
 }
 
-<<<<<<< Updated upstream
-=======
 .overlay-raise-hand {
   color: var(--color-text-inverted);
   padding-top: 0.6rem;
@@ -53,7 +51,6 @@
   justify-content: center;
 }
 
->>>>>>> Stashed changes
 @media (max-width: 480px) {
   /* Smaller Screens */
   :root {

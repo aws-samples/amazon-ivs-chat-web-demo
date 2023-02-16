@@ -1,42 +1,24 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-<<<<<<< Updated upstream
-import React, { useEffect, useState } from "react";
-=======
 import React, { useEffect } from 'react';
->>>>>>> Stashed changes
 
 // Styles
 import './VideoPlayer.css';
 
-<<<<<<< Updated upstream
-const VideoPlayer = ({ usernameRaisedHand, showRaiseHandPopup, playbackUrl }) => {
-  const renderRaiseHandPopup = (username) => {
-    if (showRaiseHandPopup) {
-      return <div className="raise-hand">{username} raised their hand</div>;
-    }
-  };
-
-=======
 const VideoPlayer = ({
   usernameRaisedHand,
   showRaiseHandPopup,
   playbackUrl,
 }) => {
->>>>>>> Stashed changes
   useEffect(() => {
     const MediaPlayerPackage = window.IVSPlayer;
 
     // First, check if the browser supports the Amazon IVS player.
     if (!MediaPlayerPackage.isPlayerSupported) {
-<<<<<<< Updated upstream
-      console.warn("The current browser does not support the Amazon IVS player.");
-=======
       console.warn(
         'The current browser does not support the Amazon IVS player.'
       );
->>>>>>> Stashed changes
       return;
     }
 
@@ -68,14 +50,7 @@ const VideoPlayer = ({
   }, []); // eslint-disable-line
 
   return (
-    <React.Fragment>
-<<<<<<< Updated upstream
-      <div className="player-wrapper">
-        <div className="aspect-169 pos-relative full-width full-height">
-          <video id="video-player" className="video-elem pos-absolute full-width" playsInline muted></video>
-        </div>
-        {renderRaiseHandPopup(usernameRaisedHand)}
-=======
+    <>
       <div className='player-wrapper'>
         <div className='aspect-169 pos-relative full-width full-height'>
           <video
@@ -103,9 +78,8 @@ const VideoPlayer = ({
             )}
           </div>
         </div>
->>>>>>> Stashed changes
       </div>
-    </React.Fragment>
+    </>
   );
 };
 
