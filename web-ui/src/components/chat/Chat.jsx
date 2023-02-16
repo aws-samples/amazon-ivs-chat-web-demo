@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import React, { useEffect, useState, createRef } from 'react';
+import React, { useEffect, useState, useRef, createRef } from 'react';
 import Linkify from 'linkify-react';
 import axios from 'axios';
 import {
@@ -18,6 +18,7 @@ import * as config from '../../config';
 import VideoPlayer from '../videoPlayer/VideoPlayer';
 import SignIn from './SignIn';
 import StickerPicker from './StickerPicker';
+import RaiseHand from './RaiseHand';
 
 // Styles
 import './Chat.css';
@@ -29,6 +30,10 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [chatRoom, setChatRoom] = useState([]);
+  const [showRaiseHandPopup, setShowRaiseHandPopup] = useState(false);
+  const [usernameRaisedHand, setUsernameRaisedHand] = useState(null);
+  const [handRaised, setHandRaised] = useState(false);
+  const previousRaiseHandUsername = useRef(null);
 
   const chatRef = createRef();
   const messagesEndRef = createRef();
@@ -130,6 +135,9 @@ const Chat = () => {
         // Received a message
         const messageType = message.attributes?.message_type || 'MESSAGE';
         switch (messageType) {
+          case 'RAISE_HAND':
+            handleRaiseHand(message);
+            break;
           case 'STICKER':
             handleSticker(message);
             break;
@@ -180,6 +188,10 @@ const Chat = () => {
     };
     scrollToBottom();
   });
+
+  useEffect(() => {
+    previousRaiseHandUsername.current = usernameRaisedHand;
+  }, [usernameRaisedHand]);
 
   // Handlers
   const handleError = (data) => {
@@ -326,6 +338,17 @@ const Chat = () => {
     });
   };
 
+  const handleRaiseHand = async (data) => {
+    const username = data.sender.attributes?.username;
+    setUsernameRaisedHand(username);
+
+    if (previousRaiseHandUsername.current !== username) {
+      setShowRaiseHandPopup(true);
+    } else {
+      setShowRaiseHandPopup((showRaiseHandPopup) => !showRaiseHandPopup);
+    }
+  };
+
   const handleStickerSend = async (sticker) => {
     const content = `Sticker: ${sticker.name}`;
     const attributes = {
@@ -335,6 +358,20 @@ const Chat = () => {
     const request = new SendMessageRequest(content, attributes);
     try {
       await chatRoom.sendMessage(request);
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  const handleRaiseHandSend = async () => {
+    const attributes = {
+      message_type: 'RAISE_HAND',
+    };
+
+    const request = new SendMessageRequest(`[raise hand event]`, attributes);
+    try {
+      await chatRoom.sendMessage(request);
+      setHandRaised((prevState) => !prevState);
     } catch (error) {
       handleError(error);
     }
@@ -538,7 +575,11 @@ const Chat = () => {
       </header>
       <div className='main full-width full-height chat-container'>
         <div className='content-wrapper mg-2'>
-          <VideoPlayer playbackUrl={config.PLAYBACK_URL} />
+          <VideoPlayer
+            usernameRaisedHand={usernameRaisedHand}
+            showRaiseHandPopup={showRaiseHandPopup}
+            playbackUrl={config.PLAYBACK_URL}
+          />
           <div className='col-wrapper'>
             <div className='chat-wrapper'>
               <div className='messages'>
@@ -563,6 +604,12 @@ const Chat = () => {
                 />
                 {isChatConnected() && (
                   <StickerPicker handleStickerSend={handleStickerSend} />
+                )}
+                {isChatConnected() && (
+                  <RaiseHand
+                    isRaised={handRaised}
+                    handleRaiseHandSend={handleRaiseHandSend}
+                  />
                 )}
                 {!username && (
                   <fieldset>
