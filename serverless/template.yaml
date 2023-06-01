@@ -9,7 +9,7 @@ Globals:
       AllowHeaders: "'*'"
       AllowOrigin: "'*'"
   Function:
-    Runtime: nodejs12.x
+    Runtime: nodejs18.x
     Timeout: 30
     MemorySize: 128
 
@@ -21,7 +21,7 @@ Resources:
       Description: Dependencies for sam app [ivs-simple-chat-backend]
       ContentUri: dependencies/
       CompatibleRuntimes:
-        - nodejs12.x
+        - nodejs18.x
       LicenseInfo: "MIT"
       RetentionPolicy: Retain
   # This is a Lambda function config associated with the source code: chat-auth.js
