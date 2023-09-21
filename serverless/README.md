@@ -41,7 +41,7 @@ Navigate to `serverless/dependencies/nodejs` and run `npm install` to install th
 Navigate back to the `serverless` directory and run the following command:
 
 ```bash
-sam local start-api
+sam local start-api -p 3100
 ```
 
 For a full list of command flags, refer to the [SAM CLI documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-start-api.html)
