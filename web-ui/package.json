@@ -6,7 +6,7 @@
     "@testing-library/jest-dom": "^5.15.1",
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
-    "amazon-ivs-chat-messaging": "^1.0.2",
+    "amazon-ivs-chat-messaging": "^1.1.1",
     "axios": "^0.26.0",
     "linkify-react": "^4.0.2",
     "linkifyjs": "^4.0.2",
